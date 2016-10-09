@@ -394,7 +394,7 @@ COMMAND_OPTIONS = {
         OPTION_CONTAINER,
     ],
     'network create': [
-        CommandOption(CommandOption.TYPE_STRING, None, 'network',
+        CommandOption(CommandOption.TYPE_NETWORK, None, 'network',
                       action='store',
                       dest='name',
                       help='Name of the network.'),
@@ -412,6 +412,7 @@ COMMAND_OPTIONS = {
                       default=None,
                       help='Set metadata on a network (default []).'),
     ],
+    'network ls': [],
     'network inspect': [
         OPTION_NETWORK
     ],
