@@ -21,8 +21,8 @@ from .options import parse_command_options
 from .options import format_command_help, format_command_line
 from .options import COMMAND_NAMES, split_command_and_args
 from .options import OptionError
-from .helpers import filesize, parse_port_bindings, parse_volume_bindings, \
-    parse_exposed_ports, parse_kv_as_dict
+from .helpers import (filesize, parse_port_bindings, parse_volume_bindings,
+                      parse_exposed_ports, parse_kv_as_dict)
 from .utils import shlex_split
 from .decorators import if_exception_return
 
@@ -392,6 +392,7 @@ class DockerClient(object):
             return ['There are no networks to list.']
 
     @if_exception_return(InvalidVersion, None)
+    @if_exception_return(APIError, ['Pre-defined network cannot be removed.'])
     def network_rm(self, *args, **_):
         """
         Remove network. Equivalent of docker network rm.
@@ -400,12 +401,13 @@ class DockerClient(object):
         :return: Network name
         """
         if not args:
-            yield 'Network name is required.'
-            return
+            return ['Network name is required.']
 
+        result = []
         for network_name in args:
             self.instance.remove_network(network_name)
-            yield network_name
+            result.append(network_name)
+        return result
 
     def pause(self, *args, **kwargs):
         """
@@ -672,7 +674,7 @@ class DockerClient(object):
         return [result['Name']]
 
     @if_exception_return(InvalidVersion, None)
-    def volume_ls(self, *args, **kwargs):
+    def volume_ls(self, *_, **kwargs):
         """
         List volumes. Equivalent of docker volume ls.
         :param kwargs:
@@ -693,7 +695,7 @@ class DockerClient(object):
             return ['There are no volumes to list.']
 
     @if_exception_return(InvalidVersion, None)
-    def volume_rm(self, *args, **kwargs):
+    def volume_rm(self, *args, **_):
         """
         Remove a volume. Equivalent of docker volume rm.
         :param kwargs:
