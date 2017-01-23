@@ -11,8 +11,9 @@ Feature: call image-related commands
      Given we have wharfee installed
       when we run wharfee
       and we wait for prompt
-      and we pull hello-world image
+      and we pull hello-world:latest image
       then we see hello-world pulled
+      and we see wharfee prompt
 
   Scenario: list images
      Given we have wharfee installed

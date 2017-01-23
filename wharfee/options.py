@@ -14,6 +14,7 @@ COMMAND_NAMES = [
     'images',
     'info',
     'inspect',
+    'kill',
     'login',
     'logs',
     'network create',
@@ -29,6 +30,7 @@ COMMAND_NAMES = [
     'port',
     'push',
     'refresh',
+    'rename',
     'restart',
     'run',
     'rm',
@@ -389,6 +391,20 @@ COMMAND_OPTIONS = {
                       help='Container to inspect.',
                       nargs='*'),
     ],
+    'kill': [
+        CommandOption(CommandOption.TYPE_CHOICE, '-s', '--signal',
+                      action='store',
+                      dest='signal',
+                      help=('Signal to send to the container'),
+                      default='KILL',
+                      choices=['ABRT', 'ALRM', 'BUS', 'CLD', 'CONT', 'FPE',
+                               'HUP', 'ILL', 'INT', 'KILL', 'PIPE', 'POLL',
+                               'PROF', 'PWR', 'QUIT', 'RTMAX', 'RTMIN', 'SEGV',
+                               'STOP', 'SYS', 'TERM', 'TRAP', 'TSTP', 'TTIN',
+                               'TTOU', 'URG', 'USR1', 'USR2', 'VTALRM',
+                               'WINCH', 'XCPU', 'XFSZ']),
+        OPTION_CONTAINER_RUNNING,
+    ],
     'login': [
         CommandOption(CommandOption.TYPE_STRING, '-e', '--email',
                       help='Email.'),
@@ -557,6 +573,9 @@ COMMAND_OPTIONS = {
                       help='Image name to push (format: "name[:tag]").'),
     ],
     'refresh': [],
+    'rename': [
+        OPTION_CONTAINER
+    ],
     'run': [
         CommandOption(CommandOption.TYPE_BOOLEAN, '-d', '--detach',
                       action='store_true',
@@ -670,6 +689,12 @@ COMMAND_OPTIONS = {
                       help='A term to search for.'),
     ],
     'stop': [
+        CommandOption(CommandOption.TYPE_NUMERIC, '-t', '--time',
+                      dest='timeout',
+                      default=10,
+                      type='int',
+                      help=('Seconds to wait for stop before killing it '
+                            '(default 10).')),
         OPTION_CONTAINER_RUNNING,
     ],
     'tag': [
@@ -874,6 +899,8 @@ def format_command_line(cmd, is_long, args, kwargs):
     def kv(o, v):
         if o.dest == 'environment':
             return kve(o, v)
+        elif o.dest == 'volumes' and ' ' in v:
+            return '{0}="{1}"'.format(o.get_name(is_long), v)
         return '{0}={1}'.format(o.get_name(is_long), v)
 
     for opt_dest, opt_value in kwargs.items():

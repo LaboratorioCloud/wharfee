@@ -73,6 +73,7 @@ class DockerClient(object):
             'info': (self.info, "Display system-wide information."),
             'inspect': (self.inspect, "Return low-level information on a " +
                         "container or image."),
+            'kill': (self.kill, "Kill one or more running containers"),
             'login': (self.login, ("Register or log in to a Docker registry "
                                    "server (defaut "
                                    "\"https://index.docker.io/v1/\").")),
@@ -83,6 +84,7 @@ class DockerClient(object):
             'network prune': (self.network_prune, 'Remove all unused networks'),
             'network rm': (self.network_rm, 'Remove a network.'),
             'refresh': (refresh_handler, "Refresh autocompletions."),
+            'rename': (self.rename, "Rename a container."),
             'restart': (self.restart, "Restart a running container."),
             'run': (self.run, "Run a command in a new container."),
             'rm': (self.rm, "Remove one or more containers."),
@@ -129,9 +131,9 @@ class DockerClient(object):
                 self.instance = AutoVersionClient(**kwargs)
 
             except DockerException as x:
-                if 'CERTIFICATE_VERIFY_FAILED' in x.message:
+                if 'CERTIFICATE_VERIFY_FAILED' in str(x):
                     raise DockerSslException(x)
-                elif 'ConnectTimeoutError' in x.message:
+                elif 'ConnectTimeoutError' in str(x):
                     raise DockerTimeoutException(x)
                 else:
                     raise x
@@ -195,7 +197,7 @@ class DockerClient(object):
 
                 except APIError as ex:
                     reset_output()
-                    self.output = [ex.explanation]
+                    self.output = [str(ex.explanation)]
 
                 except OptionError as ex:
                     reset_output()
@@ -546,7 +548,7 @@ class DockerClient(object):
                         yield container
                 except APIError as ex:
                     yield '{0:.25}: {1}'.format(container, ex.explanation)
-                yield 'Removed: {0} container(s).'.format(len(containers) if containers else 0)
+            yield 'Removed: {0} container(s).'.format(len(containers) if containers else 0)
 
         return stream()
 
@@ -684,6 +686,18 @@ class DockerClient(object):
                     return [result['Id']]
 
             return ['There was a problem creating the container.']
+
+    def rename(self, *args, **kwargs):
+        """
+        Rename a container. Equivalent of docker rename.
+        :param kwargs:
+        :return: None.
+        """
+        if not args or len(args) < 2:
+            return ['Container name and new name are required.']
+
+        self.instance.rename(*args)
+        self.is_refresh_containers = True
 
     def restart(self, *args, **kwargs):
         """
@@ -1213,6 +1227,26 @@ class DockerClient(object):
 
         return stream()
 
+    def kill(self, *args, **kwargs):
+        """
+        Kill a running container. Equivalent of docker kill.
+        :param kwargs:
+        :return: Container ID or iterable output.
+        """
+        if not args:
+            return ['Container name is required.']
+
+        def stream():
+            for container in args:
+                try:
+                    self.instance.kill(container, **kwargs)
+                    self.is_refresh_running = True
+                    yield container
+                except APIError as ex:
+                    yield '{0:.25}: {1}'.format(container, ex.explanation)
+
+        return stream()
+
     def top(self, *args, **kwargs):
         """
         Show top processes in a container. Equivalent of docker rm.
@@ -1322,7 +1356,7 @@ class DockerClient(object):
             return ['Container exited.\r']
 
         if force_call or is_interactive or is_tty or (is_attach and not is_attach_bool):
-            self.after = on_after_attach if is_attach else on_after_interactive
+            self.after = on_after_attach if is_attach or (not is_interactive and not is_tty) else on_after_interactive
             called = True
             execute_external()
 
